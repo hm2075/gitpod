@@ -366,6 +366,16 @@ func (m *Manager) createDefiniteWorkspacePod(startContext *startWorkspaceContext
 			workspaceContainer.SecurityContext.AllowPrivilegeEscalation = &boolTrue
 			workspaceContainer.SecurityContext.Privileged = &boolTrue
 			pod.Spec.ServiceAccountName = "workspace-privileged"
+		case api.WorkspaceFeatureFlag_USER_NAMESPACE:
+			// TODO(cw): test if unmasking proc is really neccesary. Maybe we get away without it.
+			unmaskedProc := corev1.UnmaskedProcMount
+			workspaceContainer.SecurityContext.ProcMount = &unmaskedProc
+			// Beware: this allows setuid binaries in the workspace - supervisor needs to set no_new_privs now.
+			workspaceContainer.SecurityContext.AllowPrivilegeEscalation = &boolTrue
+			// TODO(cw): post Kubernetes 1.19 use GA form for settings those profiles
+			// TODO(cw): DO NOT USE unconfined, but rather bring our own profiles. Don't forget to update the PodSecurityPolicy.
+			pod.ObjectMeta.Annotations["seccomp.security.alpha.kubernetes.io/workspace"] = "unconfined"
+			pod.ObjectMeta.Annotations["container.apparmor.security.beta.kubernetes.io/workspace"] = "unconfined"
 		case api.WorkspaceFeatureFlag_FULL_WORKSPACE_BACKUP:
 			removeVolume(&pod, workspaceVolumeName)
 			pod.Labels[fullWorkspaceBackupAnnotation] = "true"
