@@ -64,17 +64,30 @@ export function load(supervisorServiceClient: SupervisorServiceClient): Promise<
             console.info('IDE backend and content are ready, attaching IDE frontend...');
             document.body.appendChild(frame);
             frame.contentWindow?.addEventListener('DOMContentLoaded', () => {
-                frame.contentWindow?.history.replaceState(null, '', window.location.href);
-                if (frame.contentWindow) {
-                    frame.contentWindow.gitpod = window.gitpod;
-                }
+                frame.contentWindow!.gitpod = window.gitpod;
+
+                //#region history
+                frame.contentWindow!.history.replaceState(null, '', window.location.href);
+                frame.contentWindow!.addEventListener('popstate', () => {
+                    console.log('popstate', frame.contentWindow!.location.href);
+                });
+                frame.contentWindow!.addEventListener('pageshow', e => {
+                    console.log('pageshow', e.persisted);
+                });
+                frame.contentWindow!.addEventListener('pagehide', e => {
+                    console.log('pagehide', e.persisted);
+                });
+                //#endregion
+
+                //#region keyboard api
                 if (navigator.keyboard?.getLayoutMap && frame.contentWindow?.navigator.keyboard?.getLayoutMap) {
                     frame.contentWindow.navigator.keyboard.getLayoutMap = navigator.keyboard.getLayoutMap.bind(navigator.keyboard);
                 }
                 if (navigator.keyboard?.addEventListener && frame.contentWindow?.navigator.keyboard?.addEventListener) {
                     frame.contentWindow.navigator.keyboard.addEventListener = navigator.keyboard.addEventListener.bind(navigator.keyboard);
                 }
-            }, { once: true });
+                //#endregion
+            });
         });
     });
 }
